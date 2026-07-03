@@ -65,7 +65,43 @@
   .btn.primary:hover{background:var(--red-deep)}
   .btn:disabled{opacity:.45;cursor:not-allowed}
 
+  .tabs{display:flex;gap:4px;margin-left:18px;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:3px}
+  .tabs button{border:0;background:transparent;border-radius:7px;padding:6px 16px;font-weight:600;font-size:13px;color:var(--graphite)}
+  .tabs button.active{background:var(--ink);color:#fff}
+
   main{display:grid;grid-template-columns:340px 1fr;min-height:calc(100vh - 63px)}
+  main.rank-mode{grid-template-columns:1fr}
+  main.rank-mode aside{display:none}
+
+  /* ---------- ranking ---------- */
+  .rank-head{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  .rank-head h2{font-family:'Archivo';font-weight:850;font-stretch:112%;font-size:26px;line-height:1.05;display:flex;align-items:center;gap:12px}
+  .rank-head h2 .tri{border-left-width:7px;border-right-width:7px;border-bottom-width:12px}
+  .rank-head .spacer{flex:1}
+  .rank-head label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:grid;gap:4px}
+  .rank-head select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14px;background:var(--panel)}
+
+  .rank-row{
+    width:100%;display:grid;grid-template-columns:34px 42px minmax(140px,1fr) auto;
+    gap:4px 12px;align-items:center;text-align:left;
+    padding:8px 6px;border:0;background:transparent;border-bottom:1px dashed var(--line);border-left:3px solid transparent;
+  }
+  .rank-row:hover{background:var(--paper)}
+  .rank-row.top{border-left-color:var(--red)}
+  .rank-row.dim{opacity:.5}
+  .rank-row .pos{font-family:'IBM Plex Mono';font-size:13px;font-weight:600;color:var(--muted);text-align:right}
+  .rank-row.top .pos{color:var(--red)}
+  .rank-row .rname{font-weight:600;font-size:14px;line-height:1.2}
+  .rank-row .rval{font-family:'IBM Plex Mono';font-size:13px;font-weight:600;white-space:nowrap}
+  .rank-row .rbar{grid-column:3 / -1;height:5px;background:var(--paper);border-radius:3px;overflow:hidden}
+  .rank-row .rbar i{display:block;height:100%;background:var(--graphite);border-radius:3px}
+  .rank-row.top .rbar i{background:var(--red)}
+  .party-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+  .party-table th{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:right;padding:4px 6px;border-bottom:1px solid var(--line)}
+  .party-table th:first-child{text-align:left}
+  .party-table td{padding:6px;border-bottom:1px dashed var(--line);text-align:right;font-family:'IBM Plex Mono';font-size:12.5px}
+  .party-table td:first-child{text-align:left;font-family:'IBM Plex Sans';font-weight:600}
+
 
   /* ---------- lista de deputados ---------- */
   aside{
@@ -183,6 +219,10 @@
       <small>Assembleia Legislativa de Minas Gerais · 20ª Legislatura</small>
     </h1>
   </div>
+  <nav class="tabs" role="tablist" aria-label="Páginas">
+    <button class="active" data-view="deps" role="tab">Deputados</button>
+    <button data-view="rank" role="tab">Ranking</button>
+  </nav>
   <div class="spacer"></div>
   <button class="btn" id="btnCsv" disabled title="Exporta os dados já carregados nesta sessão">Exportar CSV</button>
   <button class="btn primary" id="btnRefresh">Atualizar deputados</button>
@@ -201,6 +241,7 @@
   <section class="stage">
     <div class="banner" id="banner"></div>
 
+    <div id="viewDeps">
     <div class="empty" id="empty">
       <span class="tri" aria-hidden="true"></span>
       <h2>Escolha um(a) deputado(a)</h2>
@@ -256,6 +297,58 @@
         Dica Power BI: use <em>Obter Dados → Web</em> com a URL acima (troque ano/mês) ou exporte o CSV desta sessão.
       </footer>
     </div>
+    </div><!-- /viewDeps -->
+
+    <div id="viewRank" hidden>
+      <div class="rank-head">
+        <h2><span class="tri" aria-hidden="true"></span>Ranking dos deputados</h2>
+        <div class="spacer"></div>
+        <label>Ano
+          <select id="rAno"></select>
+        </label>
+        <label>Mês de referência
+          <select id="rMes"></select>
+        </label>
+        <button class="btn primary" id="btnRank">Carregar ranking</button>
+      </div>
+
+      <div class="progress" id="rProgress">
+        <span id="rProgressTxt">Consultando deputados…</span>
+        <div class="bar"><i id="rProgressFill"></i></div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="label">Total do mês (77 gabinetes)</div><div class="value money" id="rkTotal">—</div></div>
+        <div class="kpi"><div class="label">Média por deputado</div><div class="value money" id="rkAvg">—</div><div class="hint" id="rkCount"></div></div>
+        <div class="kpi"><div class="label">Maior valor</div><div class="value money" id="rkMax">—</div><div class="hint" id="rkMaxHint"></div></div>
+        <div class="kpi"><div class="label">Partido que mais gastou</div><div class="value" id="rkParty" style="font-family:'IBM Plex Sans';font-size:15px;font-weight:600">—</div><div class="hint" id="rkPartyHint"></div></div>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h3><span class="tri"></span>Comparativo por deputado — <span id="rankRef"></span></h3>
+          <div id="rankList"></div>
+        </div>
+        <div style="display:grid;gap:14px">
+          <div class="card">
+            <h3><span class="tri"></span>Verba por partido — total</h3>
+            <div class="chart-wrap" style="height:300px"><canvas id="chartParty"></canvas></div>
+          </div>
+          <div class="card">
+            <h3><span class="tri"></span>Verba por partido — média por deputado</h3>
+            <div class="chart-wrap" style="height:300px"><canvas id="chartPartyAvg"></canvas></div>
+            <table class="party-table" id="partyTable"></table>
+          </div>
+        </div>
+      </div>
+
+      <footer class="note">
+        O ranking consulta a API mês a mês para cada um dos 77 gabinetes respeitando o limite oficial de 1 requisição por segundo — o primeiro carregamento leva ±90 segundos e vai preenchendo a lista ao vivo; depois o mês fica em cache na sessão.
+        A média por partido divide o total do partido pelo número de deputados do partido com fechamento no mês, para não penalizar bancadas pequenas.
+        Para análises longitudinais em massa (todos os meses de todos os anos), a ALMG também publica arquivos CSV consolidados em
+        <a href="https://dadosabertos.almg.gov.br/documentacao/arquivos" target="_blank" rel="noopener">dadosabertos.almg.gov.br → Arquivos</a> — ideais para importar no Power BI.
+      </footer>
+    </div>
   </section>
 </main>
 
@@ -291,8 +384,7 @@ const SEED = [
 ].map(([id,nome,partido])=>({id,nome,partido}));
 
 /* ================= constantes / utilidades ================= */
-const API   = "https://dadosabertos.almg.gov.br/api/v2";
-const APIWS = "https://dadosabertos.almg.gov.br/ws"; // fallback (versão anterior)
+const API = "https://dadosabertos.almg.gov.br/api/v2"; // a versão /ws foi descontinuada em 05/06/2025
 const PHOTO = id => `https://www.almg.gov.br/export/sites/portal/a-assembleia/deputados/fotos/${id}.jpg_1522201833.jpg`;
 const VERBA_PAGE = id => `https://www.almg.gov.br/transparencia/prestacao-de-contas/deputados/verba-indenizatoria/detalhe.html?id=${id}`;
 const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -312,8 +404,7 @@ async function pump(){
   await new Promise(r=>setTimeout(r,wait));
   lastReq=Date.now();
   try{
-    let res=await fetch(API+job.path);
-    if(!res.ok) res=await fetch(APIWS+job.path); // tenta versão anterior
+    const res=await fetch(API+job.path);
     if(!res.ok) throw new Error("HTTP "+res.status);
     job.resolve(await res.json());
   }catch(e){ job.reject(e); }
@@ -359,6 +450,14 @@ function parseResumo(json){ // → [{categoria, valor}]
 let deps=[...SEED], current=null, currentYear=null, chart=null, loadToken=0;
 const cache={ datas:{}, mes:{} };           // cache de sessão
 const csvRows=[];                            // linhas p/ exportação
+const csvPushed=new Set();                   // evita duplicatas entre as páginas
+function pushCsv(d,ano,mes,itens){
+  const k=`${d.id}/${ano}/${mes}`;
+  if(csvPushed.has(k)||!itens.length) return;
+  csvPushed.add(k);
+  itens.forEach(it=>csvRows.push([d.nome,d.partido,ano,mes,it.categoria,it.valor]));
+  $("#btnCsv").disabled=false;
+}
 
 /* ================= lista de deputados ================= */
 function renderList(){
@@ -473,8 +572,7 @@ async function loadYear(d,ano,datas){
       try{
         const json=await apiRequest(`/prestacao_contas/verbas_indenizatorias/deputados/${d.id}/${ano}/${m}?formato=json`);
         itens=parseResumo(json); cache.mes[key]=itens;
-        itens.forEach(it=>csvRows.push([d.nome,d.partido,ano,m,it.categoria,it.valor]));
-        $("#btnCsv").disabled=false;
+        pushCsv(d,ano,m,itens);
       }catch(e){ itens=[]; }
     }
     if(token!==loadToken||current!==d) return;   // usuário trocou de deputado/ano
@@ -554,6 +652,146 @@ $("#btnCsv").onclick=()=>{
   a.click(); URL.revokeObjectURL(a.href);
 };
 
+/* ================= páginas (abas) ================= */
+function switchView(v){
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
+  $("#viewDeps").hidden = v!=="deps";
+  $("#viewRank").hidden = v!=="rank";
+  document.querySelector("main").classList.toggle("rank-mode", v==="rank");
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+
+/* ================= ranking comparativo ================= */
+let rankToken=0, chartParty=null, chartPartyAvg=null;
+const rankCache={}; // "ano/mes" -> { vals: {idDeputado: valorTotal|null}, catsPushed:Set }
+
+function initRankControls(){
+  const anoSel=$("#rAno"), mesSel=$("#rMes");
+  const hoje=new Date();
+  for(let a=hoje.getFullYear(); a>=2023; a--){ // 20ª legislatura
+    const o=document.createElement("option"); o.value=o.textContent=a; anoSel.appendChild(o);
+  }
+  MESES.forEach((m,i)=>{ const o=document.createElement("option"); o.value=i+1; o.textContent=m; mesSel.appendChild(o); });
+  // padrão: dois meses atrás (fechamento da verba é publicado com atraso)
+  const ref=new Date(hoje.getFullYear(), hoje.getMonth()-2, 1);
+  anoSel.value=ref.getFullYear(); mesSel.value=ref.getMonth()+1;
+}
+
+async function loadRanking(){
+  const ano=+$("#rAno").value, mes=+$("#rMes").value;
+  const token=++rankToken;
+  const key=ano+"/"+mes;
+  const store=rankCache[key]||(rankCache[key]={vals:{}});
+  $("#rankRef").textContent=MESES[mes-1]+"/"+ano;
+  $("#btnRank").disabled=true;
+
+  const pend=deps.filter(d=>store.vals[d.id]===undefined);
+  let done=deps.length-pend.length;
+  rProgress(true,`Consultando ${deps.length} gabinetes…`,done/deps.length);
+  renderRanking(store,ano,mes);
+
+  for(const d of pend){
+    try{
+      const mKey=`${d.id}/${ano}/${mes}`;
+      let itens=cache.mes[mKey];
+      if(!itens){
+        const json=await apiRequest(`/prestacao_contas/verbas_indenizatorias/deputados/${d.id}/${ano}/${mes}?formato=json`);
+        itens=parseResumo(json); cache.mes[mKey]=itens;
+      }
+      store.vals[d.id]=itens.length?itens.reduce((s,it)=>s+it.valor,0):null; // null = sem fechamento
+      pushCsv(d,ano,mes,itens);
+    }catch(e){ store.vals[d.id]=null; }
+    if(token!==rankToken) return; // usuário trocou mês/ano
+    done++;
+    rProgress(true,`Consultando ${done}/${deps.length} gabinetes — ${d.nome}`,done/deps.length);
+    renderRanking(store,ano,mes); // ranking se monta ao vivo
+  }
+  rProgress(false);
+  $("#btnRank").disabled=false;
+}
+
+function rProgress(show,txt,frac){
+  $("#rProgress").classList.toggle("show",!!show);
+  if(txt)$("#rProgressTxt").textContent=txt;
+  $("#rProgressFill").style.width=((frac||0)*100)+"%";
+}
+
+function renderRanking(store,ano,mes){
+  const rows=deps
+    .filter(d=>store.vals[d.id]!==undefined)
+    .map(d=>({d,val:store.vals[d.id]}))
+    .sort((a,b)=>(b.val??-1)-(a.val??-1));
+  const comDados=rows.filter(r=>r.val!=null);
+  const total=comDados.reduce((s,r)=>s+r.val,0);
+  const maxVal=comDados.length?comDados[0].val:1;
+
+  /* KPIs */
+  $("#rkTotal").textContent=fmtBRL(total);
+  $("#rkAvg").textContent=fmtBRL(comDados.length?total/comDados.length:0);
+  $("#rkCount").textContent=comDados.length+" de "+deps.length+" com fechamento em "+MESES[mes-1]+"/"+ano;
+  if(comDados.length){
+    $("#rkMax").textContent=fmtBRL(comDados[0].val);
+    $("#rkMaxHint").textContent=comDados[0].d.nome;
+  }
+
+  /* lista comparativa */
+  $("#rankList").innerHTML=rows.map((r,i)=>{
+    const sem=r.val==null;
+    return `<button class="rank-row${i<3&&!sem?" top":""}${sem?" dim":""}" data-id="${r.d.id}">
+      <span class="pos">${sem?"–":i+1}</span>
+      <img class="avatar" loading="lazy" alt="" src="${PHOTO(r.d.id)}" onerror="this.style.visibility='hidden'">
+      <span><span class="rname">${r.d.nome}</span> <span class="party-chip">${r.d.partido}</span></span>
+      <span class="rval">${sem?"sem fechamento":"R$ "+fmtBRL(r.val)}</span>
+      <span class="rbar"><i style="width:${sem?0:(r.val/maxVal*100).toFixed(1)}%"></i></span>
+    </button>`;
+  }).join("");
+  $("#rankList").querySelectorAll(".rank-row").forEach(b=>b.onclick=()=>{
+    const dep=deps.find(d=>d.id===+b.dataset.id);
+    if(dep){ switchView("deps"); selectDep(dep); }
+  });
+
+  /* dimensão de partido */
+  const byParty={};
+  for(const r of comDados){
+    const p=byParty[r.d.partido]||(byParty[r.d.partido]={total:0,n:0});
+    p.total+=r.val; p.n++;
+  }
+  const partidos=Object.entries(byParty).sort((a,b)=>b[1].total-a[1].total);
+  if(partidos.length){
+    $("#rkParty").textContent=partidos[0][0];
+    $("#rkPartyHint").textContent="R$ "+fmtBRL(partidos[0][1].total)+" · "+partidos[0][1].n+" deputados";
+  }
+  const labels=partidos.map(p=>p[0]);
+  const totals=partidos.map(p=>p[1].total);
+  const porMedia=[...partidos].sort((a,b)=>(b[1].total/b[1].n)-(a[1].total/a[1].n));
+  const avgLabels=porMedia.map(p=>p[0]);
+  const avgs=porMedia.map(p=>p[1].total/p[1].n);
+
+  const base={
+    responsive:true,maintainAspectRatio:false,animation:false,indexAxis:"y",
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" R$ "+fmtBRL(c.parsed.x)}}},
+    scales:{x:{ticks:{callback:v=>"R$ "+(v>=1000?(v/1000).toLocaleString("pt-BR")+" mil":v)},grid:{color:"#EDF0F3"}},
+            y:{grid:{display:false},ticks:{font:{family:"'IBM Plex Mono'",size:11}}}}
+  };
+  if(!chartParty){
+    chartParty=new Chart($("#chartParty"),{type:"bar",
+      data:{labels,datasets:[{data:totals,backgroundColor:"#C8102E",borderRadius:4,maxBarThickness:22}]},options:base});
+  }else{ chartParty.data.labels=labels; chartParty.data.datasets[0].data=totals; chartParty.update(); }
+  if(!chartPartyAvg){
+    chartPartyAvg=new Chart($("#chartPartyAvg"),{type:"bar",
+      data:{labels:avgLabels,datasets:[{data:avgs,backgroundColor:"#454E58",borderRadius:4,maxBarThickness:22}]},options:base});
+  }else{ chartPartyAvg.data.labels=avgLabels; chartPartyAvg.data.datasets[0].data=avgs; chartPartyAvg.update(); }
+
+  /* tabela-resumo por partido */
+  $("#partyTable").innerHTML=
+    "<tr><th>Partido</th><th>Dep.</th><th>Total</th><th>Média</th></tr>"+
+    partidos.map(([sigla,p])=>
+      `<tr><td>${sigla}</td><td>${p.n}</td><td>${fmtBRL(p.total)}</td><td>${fmtBRL(p.total/p.n)}</td></tr>`).join("");
+}
+
+$("#btnRank").onclick=loadRanking;
+initRankControls();
+
 /* ================= inicialização ================= */
 $("#q").addEventListener("input",renderList);
 $("#party").addEventListener("change",renderList);
@@ -562,3 +800,4 @@ renderPartyFilter(); renderList(); refreshDeps();
 </script>
 </body>
 </html>
+
