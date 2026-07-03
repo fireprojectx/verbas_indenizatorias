@@ -74,27 +74,44 @@
   main.rank-mode aside{display:none}
 
   /* ---------- ranking ---------- */
-  .rank-head{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  .rank-head{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px}
   .rank-head h2{font-family:'Archivo';font-weight:850;font-stretch:112%;font-size:26px;line-height:1.05;display:flex;align-items:center;gap:12px}
   .rank-head h2 .tri{border-left-width:7px;border-right-width:7px;border-bottom-width:12px}
   .rank-head .spacer{flex:1}
-  .rank-head label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:grid;gap:4px}
-  .rank-head select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14px;background:var(--panel)}
 
+  .period-picker{
+    width:100%;display:flex;flex-wrap:wrap;gap:14px 24px;align-items:flex-end;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:18px;
+  }
+  .period-group{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .period-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;max-width:560px}
+  .chip{
+    border:1px solid var(--line);background:var(--paper);border-radius:8px;
+    padding:5px 11px;font-family:'IBM Plex Mono';font-size:12.5px;font-weight:600;color:var(--graphite);
+  }
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .period-actions{display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap}
+  .period-summary{width:100%;font-size:12.5px;color:var(--muted)}
+
+  #rankList{position:relative}
   .rank-row{
-    width:100%;display:grid;grid-template-columns:34px 42px minmax(140px,1fr) auto;
+    position:absolute;top:0;left:0;right:0;
+    display:grid;grid-template-columns:34px 42px minmax(140px,1fr) auto;
     gap:4px 12px;align-items:center;text-align:left;
-    padding:8px 6px;border:0;background:transparent;border-bottom:1px dashed var(--line);border-left:3px solid transparent;
+    padding:8px 6px;border:0;background:var(--panel);border-bottom:1px dashed var(--line);border-left:3px solid transparent;
+    transition:transform .5s cubic-bezier(.4,0,.2,1), opacity .3s ease;
   }
   .rank-row:hover{background:var(--paper)}
   .rank-row.top{border-left-color:var(--red)}
-  .rank-row.dim{opacity:.5}
+  .rank-row.dim{opacity:.45}
   .rank-row .pos{font-family:'IBM Plex Mono';font-size:13px;font-weight:600;color:var(--muted);text-align:right}
   .rank-row.top .pos{color:var(--red)}
   .rank-row .rname{font-weight:600;font-size:14px;line-height:1.2}
   .rank-row .rval{font-family:'IBM Plex Mono';font-size:13px;font-weight:600;white-space:nowrap}
   .rank-row .rbar{grid-column:3 / -1;height:5px;background:var(--paper);border-radius:3px;overflow:hidden}
-  .rank-row .rbar i{display:block;height:100%;background:var(--graphite);border-radius:3px}
+  .rank-row .rbar i{display:block;height:100%;width:0;background:var(--graphite);border-radius:3px;transition:width .5s ease}
   .rank-row.top .rbar i{background:var(--red)}
   .party-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
   .party-table th{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:right;padding:4px 6px;border-bottom:1px solid var(--line)}
@@ -302,14 +319,23 @@
     <div id="viewRank" hidden>
       <div class="rank-head">
         <h2><span class="tri" aria-hidden="true"></span>Ranking dos deputados</h2>
-        <div class="spacer"></div>
-        <label>Ano
-          <select id="rAno"></select>
-        </label>
-        <label>Mês de referência
-          <select id="rMes"></select>
-        </label>
-        <button class="btn primary" id="btnRank">Carregar ranking</button>
+      </div>
+
+      <div class="period-picker">
+        <div class="period-group">
+          <span class="period-label">Anos</span>
+          <div class="chip-row" id="rAnos"></div>
+        </div>
+        <div class="period-group">
+          <span class="period-label">Meses</span>
+          <div class="chip-row" id="rMeses"></div>
+        </div>
+        <div class="period-actions">
+          <button class="btn" id="btnMandato" type="button">Mandato completo</button>
+          <button class="btn" id="btnLimparPeriodo" type="button">Limpar seleção</button>
+          <button class="btn primary" id="btnRank" type="button">Carregar ranking</button>
+        </div>
+        <div class="period-summary" id="periodSummary">Selecione ao menos um ano e um mês.</div>
       </div>
 
       <div class="progress" id="rProgress">
@@ -318,9 +344,9 @@
       </div>
 
       <div class="kpis">
-        <div class="kpi"><div class="label">Total do mês (77 gabinetes)</div><div class="value money" id="rkTotal">—</div></div>
+        <div class="kpi"><div class="label">Total no período selecionado</div><div class="value money" id="rkTotal">—</div></div>
         <div class="kpi"><div class="label">Média por deputado</div><div class="value money" id="rkAvg">—</div><div class="hint" id="rkCount"></div></div>
-        <div class="kpi"><div class="label">Maior valor</div><div class="value money" id="rkMax">—</div><div class="hint" id="rkMaxHint"></div></div>
+        <div class="kpi"><div class="label">Maior valor acumulado</div><div class="value money" id="rkMax">—</div><div class="hint" id="rkMaxHint"></div></div>
         <div class="kpi"><div class="label">Partido que mais gastou</div><div class="value" id="rkParty" style="font-family:'IBM Plex Sans';font-size:15px;font-weight:600">—</div><div class="hint" id="rkPartyHint"></div></div>
       </div>
 
@@ -343,8 +369,9 @@
       </div>
 
       <footer class="note">
-        O ranking consulta a API mês a mês para cada um dos 77 gabinetes respeitando o limite oficial de 1 requisição por segundo — o primeiro carregamento leva ±90 segundos e vai preenchendo a lista ao vivo; depois o mês fica em cache na sessão.
-        A média por partido divide o total do partido pelo número de deputados do partido com fechamento no mês, para não penalizar bancadas pequenas.
+        O ranking consulta a API mês a mês, para cada um dos 77 gabinetes e para cada mês selecionado, respeitando o limite oficial de 1 requisição por segundo — por isso um mandato completo pode levar dezenas de minutos.
+        As barras se comportam como uma corrida: começam zeradas e vão crescendo e trocando de posição a cada resposta da API. Meses já consultados nesta sessão ficam em cache e não são buscados de novo, então repetir ou ampliar a seleção de período é rápido.
+        A média por partido divide o total do partido pelo número de deputados do partido com algum dado no período, para não penalizar bancadas pequenas.
         Para análises longitudinais em massa (todos os meses de todos os anos), a ALMG também publica arquivos CSV consolidados em
         <a href="https://dadosabertos.almg.gov.br/documentacao/arquivos" target="_blank" rel="noopener">dadosabertos.almg.gov.br → Arquivos</a> — ideais para importar no Power BI.
       </footer>
@@ -404,7 +431,10 @@ async function pump(){
   await new Promise(r=>setTimeout(r,wait));
   lastReq=Date.now();
   try{
-    const res=await fetch(API+job.path);
+    const ctrl=new AbortController();
+    const timeout=setTimeout(()=>ctrl.abort(),15000); // evita travar a fila inteira se a rede cair/atrasar
+    let res;
+    try{ res=await fetch(API+job.path,{signal:ctrl.signal}); } finally{ clearTimeout(timeout); }
     if(!res.ok) throw new Error("HTTP "+res.status);
     job.resolve(await res.json());
   }catch(e){ job.reject(e); }
@@ -661,50 +691,107 @@ function switchView(v){
 }
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
 
-/* ================= ranking comparativo ================= */
+/* ================= ranking comparativo (corrida de barras) ================= */
 let rankToken=0, chartParty=null, chartPartyAvg=null;
-const rankCache={}; // "ano/mes" -> { vals: {idDeputado: valorTotal|null}, catsPushed:Set }
+let periods=[];               // períodos {ano,mes} selecionados nesta corrida, em ordem cronológica
+const raceRows=new Map();     // idDeputado -> elemento <button> da barra (identidade estável p/ animar)
+let raceRowH=0;               // altura de uma linha da corrida, medida no 1º elemento criado
+
+function chip(container,val,text){
+  const b=document.createElement("button");
+  b.type="button"; b.className="chip"; b.textContent=text; b.dataset.val=val;
+  b.onclick=()=>{ b.classList.toggle("active"); updatePeriodSummary(); };
+  container.appendChild(b);
+  return b;
+}
 
 function initRankControls(){
-  const anoSel=$("#rAno"), mesSel=$("#rMes");
-  const hoje=new Date();
-  for(let a=hoje.getFullYear(); a>=2023; a--){ // 20ª legislatura
-    const o=document.createElement("option"); o.value=o.textContent=a; anoSel.appendChild(o);
-  }
-  MESES.forEach((m,i)=>{ const o=document.createElement("option"); o.value=i+1; o.textContent=m; mesSel.appendChild(o); });
-  // padrão: dois meses atrás (fechamento da verba é publicado com atraso)
-  const ref=new Date(hoje.getFullYear(), hoje.getMonth()-2, 1);
-  anoSel.value=ref.getFullYear(); mesSel.value=ref.getMonth()+1;
+  const anosWrap=$("#rAnos"), mesesWrap=$("#rMeses");
+  const hoje=new Date(), anoAtual=hoje.getFullYear();
+  for(let a=anoAtual; a>=2023; a--) chip(anosWrap,a,String(a)); // 20ª legislatura começou em 2023
+  MESES.forEach((m,i)=>chip(mesesWrap,i+1,m));
+
+  // padrão: mês de referência = dois meses atrás (fechamento da verba é publicado com atraso)
+  const ref=new Date(anoAtual, hoje.getMonth()-2, 1);
+  [...anosWrap.children].find(b=>+b.dataset.val===ref.getFullYear())?.classList.add("active");
+  [...mesesWrap.children].find(b=>+b.dataset.val===ref.getMonth()+1)?.classList.add("active");
+
+  $("#btnMandato").onclick=()=>{
+    [...anosWrap.children,...mesesWrap.children].forEach(b=>b.classList.add("active"));
+    updatePeriodSummary();
+  };
+  $("#btnLimparPeriodo").onclick=()=>{
+    [...anosWrap.children,...mesesWrap.children].forEach(b=>b.classList.remove("active"));
+    updatePeriodSummary();
+  };
+  updatePeriodSummary();
+}
+
+/* cruza os anos × meses marcados, descarta combinações futuras, ordena do mais antigo ao mais novo */
+function buildPeriods(){
+  const anos=[...$("#rAnos").querySelectorAll(".active")].map(b=>+b.dataset.val).sort((a,b)=>a-b);
+  const meses=[...$("#rMeses").querySelectorAll(".active")].map(b=>+b.dataset.val).sort((a,b)=>a-b);
+  const hoje=new Date(), curKey=hoje.getFullYear()*100+(hoje.getMonth()+1);
+  const list=[];
+  for(const a of anos) for(const m of meses) if(a*100+m<=curKey) list.push({ano:a,mes:m});
+  return list;
+}
+
+function updatePeriodSummary(){
+  const list=buildPeriods();
+  const el=$("#periodSummary");
+  if(!list.length){ el.textContent="Selecione ao menos um ano e um mês."; return; }
+  let pend=0;
+  for(const p of list) for(const d of deps) if(cache.mes[`${d.id}/${p.ano}/${p.mes}`]===undefined) pend++;
+  const ini=list[0], fim=list[list.length-1];
+  let txt=`${list.length} período(s) · ${MESES[ini.mes-1]}/${ini.ano} – ${MESES[fim.mes-1]}/${fim.ano}`;
+  txt+= pend ? ` · ${pend} requisições novas (~${Math.ceil(pend*1.1/60)} min a 1 req/s)` : " · já em cache — carregamento instantâneo";
+  el.textContent=txt;
 }
 
 async function loadRanking(){
-  const ano=+$("#rAno").value, mes=+$("#rMes").value;
+  periods=buildPeriods();
+  if(!periods.length){ updatePeriodSummary(); return; }
+
+  let pend=0;
+  for(const p of periods) for(const d of deps) if(cache.mes[`${d.id}/${p.ano}/${p.mes}`]===undefined) pend++;
+  if(pend*1.1>180){ // um único mês (77 gabinetes, ~85s) sempre passa direto; só confirma para cargas maiores
+    const etaMin=Math.ceil(pend*1.1/60);
+    if(!confirm(`Isso vai fazer ${pend} requisições novas à API da ALMG, respeitando o limite de 1 por segundo — cerca de ${etaMin} min. Deixe a aba aberta até concluir. Continuar?`)) return;
+  }
+
   const token=++rankToken;
-  const key=ano+"/"+mes;
-  const store=rankCache[key]||(rankCache[key]={vals:{}});
-  $("#rankRef").textContent=MESES[mes-1]+"/"+ano;
   $("#btnRank").disabled=true;
+  raceRows.clear(); $("#rankList").innerHTML=""; raceRowH=0;
 
-  const pend=deps.filter(d=>store.vals[d.id]===undefined);
-  let done=deps.length-pend.length;
-  rProgress(true,`Consultando ${deps.length} gabinetes…`,done/deps.length);
-  renderRanking(store,ano,mes);
+  const ini=periods[0], fim=periods[periods.length-1];
+  $("#rankRef").textContent = periods.length===1
+    ? `${MESES[ini.mes-1]}/${ini.ano}`
+    : `${MESES[ini.mes-1]}/${ini.ano} – ${MESES[fim.mes-1]}/${fim.ano} (${periods.length} meses)`;
 
-  for(const d of pend){
-    try{
-      const mKey=`${d.id}/${ano}/${mes}`;
-      let itens=cache.mes[mKey];
+  let doneReq=0;
+  const totalReq=periods.length*deps.length;
+  rProgress(true,`Consultando ${totalReq} combinações (deputado × mês)…`,0);
+  renderRace(token);
+
+  for(const p of periods){
+    for(const d of deps){
+      if(token!==rankToken) return; // usuário trocou a seleção de período
+      const key=`${d.id}/${p.ano}/${p.mes}`;
+      let itens=cache.mes[key];
       if(!itens){
-        const json=await apiRequest(`/prestacao_contas/verbas_indenizatorias/deputados/${d.id}/${ano}/${mes}?formato=json`);
-        itens=parseResumo(json); cache.mes[mKey]=itens;
+        try{
+          const json=await apiRequest(`/prestacao_contas/verbas_indenizatorias/deputados/${d.id}/${p.ano}/${p.mes}?formato=json`);
+          itens=parseResumo(json);
+        }catch(e){ itens=[]; }
+        cache.mes[key]=itens;
+        pushCsv(d,p.ano,p.mes,itens);
       }
-      store.vals[d.id]=itens.length?itens.reduce((s,it)=>s+it.valor,0):null; // null = sem fechamento
-      pushCsv(d,ano,mes,itens);
-    }catch(e){ store.vals[d.id]=null; }
-    if(token!==rankToken) return; // usuário trocou mês/ano
-    done++;
-    rProgress(true,`Consultando ${done}/${deps.length} gabinetes — ${d.nome}`,done/deps.length);
-    renderRanking(store,ano,mes); // ranking se monta ao vivo
+      if(token!==rankToken) return;
+      doneReq++;
+      rProgress(true,`${MESES[p.mes-1]}/${p.ano} · ${d.nome} · ${doneReq}/${totalReq}`,doneReq/totalReq);
+      renderRace(token); // a corrida se atualiza a cada resposta da API
+    }
   }
   rProgress(false);
   $("#btnRank").disabled=false;
@@ -716,45 +803,68 @@ function rProgress(show,txt,frac){
   $("#rProgressFill").style.width=((frac||0)*100)+"%";
 }
 
-function renderRanking(store,ano,mes){
-  const rows=deps
-    .filter(d=>store.vals[d.id]!==undefined)
-    .map(d=>({d,val:store.vals[d.id]}))
-    .sort((a,b)=>(b.val??-1)-(a.val??-1));
-  const comDados=rows.filter(r=>r.val!=null);
-  const total=comDados.reduce((s,r)=>s+r.val,0);
-  const maxVal=comDados.length?comDados[0].val:1;
+/* soma, por deputado, o que já foi respondido pela API dentre os períodos selecionados */
+function computeState(){
+  return deps.map(d=>{
+    let total=0, pending=0;
+    for(const p of periods){
+      const itens=cache.mes[`${d.id}/${p.ano}/${p.mes}`];
+      if(itens===undefined) pending++;
+      else total+=itens.reduce((s,it)=>s+it.valor,0);
+    }
+    return {d,total,pending};
+  });
+}
+
+function renderRace(token){
+  if(token!==rankToken) return;
+  const state=computeState();
+  const sorted=[...state].sort((a,b)=> b.total-a.total || a.d.nome.localeCompare(b.d.nome,"pt-BR"));
+  const comDados=sorted.filter(r=>r.pending<periods.length); // já respondeu pelo menos 1 período
+  const maxVal=comDados.length && comDados[0].total>0 ? comDados[0].total : 1;
+  const wrap=$("#rankList");
+
+  sorted.forEach((r,i)=>{
+    let el=raceRows.get(r.d.id);
+    if(!el){
+      el=document.createElement("button");
+      el.className="rank-row";
+      el.innerHTML=`<span class="pos"></span>
+        <img class="avatar" loading="lazy" alt="" src="${PHOTO(r.d.id)}" onerror="this.style.visibility='hidden'">
+        <span><span class="rname">${r.d.nome}</span> <span class="party-chip">${r.d.partido}</span></span>
+        <span class="rval"></span>
+        <span class="rbar"><i></i></span>`;
+      el.onclick=()=>{ switchView("deps"); selectDep(r.d); };
+      raceRows.set(r.d.id,el);
+      wrap.appendChild(el);
+      if(!raceRowH) raceRowH=el.getBoundingClientRect().height||70;
+    }
+    const semDados=r.pending===periods.length;
+    el.style.transform=`translateY(${i*(raceRowH||70)}px)`;
+    el.classList.toggle("top", i<3 && !semDados);
+    el.classList.toggle("dim", semDados);
+    el.querySelector(".pos").textContent = semDados ? "–" : i+1;
+    el.querySelector(".rval").textContent = semDados ? "aguardando…"
+      : "R$ "+fmtBRL(r.total)+(r.pending ? " ⋯" : "");
+    el.querySelector(".rbar i").style.width = semDados ? "0%" : (r.total/maxVal*100).toFixed(1)+"%";
+  });
+  wrap.style.height=(sorted.length*(raceRowH||70))+"px";
 
   /* KPIs */
+  const total=comDados.reduce((s,r)=>s+r.total,0);
   $("#rkTotal").textContent=fmtBRL(total);
   $("#rkAvg").textContent=fmtBRL(comDados.length?total/comDados.length:0);
-  $("#rkCount").textContent=comDados.length+" de "+deps.length+" com fechamento em "+MESES[mes-1]+"/"+ano;
-  if(comDados.length){
-    $("#rkMax").textContent=fmtBRL(comDados[0].val);
+  $("#rkCount").textContent=comDados.length+" de "+deps.length+" com algum dado no período";
+  if(comDados.length && comDados[0].total>0){
+    $("#rkMax").textContent=fmtBRL(comDados[0].total);
     $("#rkMaxHint").textContent=comDados[0].d.nome;
   }
-
-  /* lista comparativa */
-  $("#rankList").innerHTML=rows.map((r,i)=>{
-    const sem=r.val==null;
-    return `<button class="rank-row${i<3&&!sem?" top":""}${sem?" dim":""}" data-id="${r.d.id}">
-      <span class="pos">${sem?"–":i+1}</span>
-      <img class="avatar" loading="lazy" alt="" src="${PHOTO(r.d.id)}" onerror="this.style.visibility='hidden'">
-      <span><span class="rname">${r.d.nome}</span> <span class="party-chip">${r.d.partido}</span></span>
-      <span class="rval">${sem?"sem fechamento":"R$ "+fmtBRL(r.val)}</span>
-      <span class="rbar"><i style="width:${sem?0:(r.val/maxVal*100).toFixed(1)}%"></i></span>
-    </button>`;
-  }).join("");
-  $("#rankList").querySelectorAll(".rank-row").forEach(b=>b.onclick=()=>{
-    const dep=deps.find(d=>d.id===+b.dataset.id);
-    if(dep){ switchView("deps"); selectDep(dep); }
-  });
 
   /* dimensão de partido */
   const byParty={};
   for(const r of comDados){
     const p=byParty[r.d.partido]||(byParty[r.d.partido]={total:0,n:0});
-    p.total+=r.val; p.n++;
+    p.total+=r.total; p.n++;
   }
   const partidos=Object.entries(byParty).sort((a,b)=>b[1].total-a[1].total);
   if(partidos.length){
@@ -768,7 +878,7 @@ function renderRanking(store,ano,mes){
   const avgs=porMedia.map(p=>p[1].total/p[1].n);
 
   const base={
-    responsive:true,maintainAspectRatio:false,animation:false,indexAxis:"y",
+    responsive:true,maintainAspectRatio:false,animation:{duration:400},indexAxis:"y",
     plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" R$ "+fmtBRL(c.parsed.x)}}},
     scales:{x:{ticks:{callback:v=>"R$ "+(v>=1000?(v/1000).toLocaleString("pt-BR")+" mil":v)},grid:{color:"#EDF0F3"}},
             y:{grid:{display:false},ticks:{font:{family:"'IBM Plex Mono'",size:11}}}}
