@@ -214,6 +214,18 @@
   footer.note{
     margin-top:28px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;
   }
+
+  /* ---------- teto mensal ---------- */
+  .teto-info{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:18px;font-size:13.5px;color:var(--graphite);
+  }
+  .teto-info strong{color:var(--ink);font-size:15px;display:block;margin-bottom:6px}
+  .teto-info p{margin-top:4px;line-height:1.55}
+  .teto-legend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--graphite);margin-bottom:10px}
+  .teto-legend span{display:inline-flex;align-items:center;gap:6px}
+  .teto-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .teto-legend .dash{color:var(--ink);font-weight:600}
   footer.note code{
     font-family:'IBM Plex Mono';font-size:11.5px;background:var(--panel);
     border:1px solid var(--line);border-radius:6px;padding:2px 6px;word-break:break-all;
@@ -239,6 +251,7 @@
   <nav class="tabs" role="tablist" aria-label="Páginas">
     <button class="active" data-view="deps" role="tab">Deputados</button>
     <button data-view="rank" role="tab">Ranking</button>
+    <button data-view="teto" role="tab">Acima do teto</button>
   </nav>
   <div class="spacer"></div>
   <button class="btn" id="btnCsv" disabled title="Exporta os dados já carregados nesta sessão">Exportar CSV</button>
@@ -374,6 +387,60 @@
         A média por partido divide o total do partido pelo número de deputados do partido com algum dado no período, para não penalizar bancadas pequenas.
         Para análises longitudinais em massa (todos os meses de todos os anos), a ALMG também publica arquivos CSV consolidados em
         <a href="https://dadosabertos.almg.gov.br/documentacao/arquivos" target="_blank" rel="noopener">dadosabertos.almg.gov.br → Arquivos</a> — ideais para importar no Power BI.
+      </footer>
+    </div>
+
+    <div id="viewTeto" hidden>
+      <div class="rank-head">
+        <h2><span class="tri" aria-hidden="true"></span>Acima do teto mensal</h2>
+      </div>
+
+      <div class="teto-info">
+        <div>
+          <strong>Teto mensal da verba indenizatória: <span id="ttTetoValor">R$ 31.500,00</span></strong>
+          <p>Limite de reembolso mensal fixado pela Deliberação da Mesa nº 2.446/2009 (ALMG), reajustado em 16,6% —
+          de R$ 27 mil para R$ 31,5 mil — a partir de fevereiro de 2023. O saldo não usado num mês pode ser acumulado
+          e reembolsado em meses seguintes dentro do mesmo exercício financeiro, o que permite que a média mensal
+          de um período, ou mesmo um único mês, ultrapasse esse valor nominal.
+          Fonte: <a href="https://www.otempo.com.br/politica/aparte/almg-aumenta-limite-da-verba-indenizatoria-de-deputados-para-r-31-5-mil-1.2815926" target="_blank" rel="noopener">O TEMPO, 21/02/2023</a>
+          e <a href="https://www.almg.gov.br/transparencia/prestacao-de-contas/deputados/verba-indenizatoria/" target="_blank" rel="noopener">portal de transparência da ALMG</a>.
+          Confira o valor vigente antes de tirar conclusões — deliberações da Mesa podem reajustá-lo.</p>
+        </div>
+      </div>
+
+      <div class="banner" id="tetoEmpty" style="display:block;margin-bottom:18px">
+        Este painel reaproveita os dados já consultados na aba <strong>Ranking</strong>.
+        Selecione um período lá e clique em <em>Carregar ranking</em>; ao voltar aqui, a média mensal de cada
+        deputado(a) no período será comparada ao teto.
+        <div style="margin-top:10px"><button class="btn primary" id="btnIrRanking" type="button">Ir para o Ranking</button></div>
+      </div>
+
+      <div id="tetoBody" hidden>
+        <div class="period-summary" style="margin-bottom:14px">Período analisado: <strong id="ttRef"></strong></div>
+
+        <div class="kpis">
+          <div class="kpi"><div class="label">Teto mensal vigente</div><div class="value money" id="ttTeto">—</div></div>
+          <div class="kpi"><div class="label">Acima do teto</div><div class="value" id="ttCount">—</div><div class="hint" id="ttCountHint"></div></div>
+          <div class="kpi"><div class="label">Maior média mensal</div><div class="value money" id="ttMax">—</div><div class="hint" id="ttMaxHint"></div></div>
+          <div class="kpi"><div class="label">Média geral dos deputados</div><div class="value money" id="ttAvg">—</div></div>
+        </div>
+
+        <div class="card">
+          <h3><span class="tri"></span>Média mensal por deputado(a) vs. teto</h3>
+          <div class="teto-legend">
+            <span><i style="background:#C8102E"></i>Acima do teto</span>
+            <span><i style="background:#454E58"></i>Dentro do teto</span>
+            <span class="dash">- - -&nbsp;linha do teto mensal</span>
+          </div>
+          <div class="chart-wrap" id="tetoChartWrap"><canvas id="chartTeto"></canvas></div>
+        </div>
+      </div>
+
+      <footer class="note">
+        A média mensal de cada deputado(a) é o total reembolsado no período selecionado dividido pelo número de
+        meses, dentro desse período, em que a API retornou algum dado — meses ainda não consultados não entram na conta.
+        Este é um indicador de acompanhamento, não uma constatação de irregularidade: acúmulo de saldo entre meses é
+        permitido pela norma vigente.
       </footer>
     </div>
   </section>
@@ -687,9 +754,12 @@ function switchView(v){
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
   $("#viewDeps").hidden = v!=="deps";
   $("#viewRank").hidden = v!=="rank";
-  document.querySelector("main").classList.toggle("rank-mode", v==="rank");
+  $("#viewTeto").hidden = v!=="teto";
+  document.querySelector("main").classList.toggle("rank-mode", v==="rank"||v==="teto");
+  if(v==="teto") renderTeto();
 }
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+$("#btnIrRanking").onclick=()=>switchView("rank");
 
 /* ================= ranking comparativo (corrida de barras) ================= */
 let rankToken=0, chartParty=null, chartPartyAvg=null;
@@ -897,10 +967,93 @@ function renderRace(token){
     "<tr><th>Partido</th><th>Dep.</th><th>Total</th><th>Média</th></tr>"+
     partidos.map(([sigla,p])=>
       `<tr><td>${sigla}</td><td>${p.n}</td><td>${fmtBRL(p.total)}</td><td>${fmtBRL(p.total/p.n)}</td></tr>`).join("");
+
+  if(!$("#viewTeto").hidden) renderTeto();
 }
 
 $("#btnRank").onclick=loadRanking;
 initRankControls();
+
+/* ================= acima do teto mensal ================= */
+/* Deliberação da Mesa nº 2.446/2009 (ALMG), reajustada em 16,6% (de R$ 27 mil p/ R$ 31,5 mil) a partir de fev/2023.
+   Confira o valor vigente no portal de transparência da ALMG antes de usar em análises — a Mesa pode reajustá-lo. */
+const TETO_MENSAL = 31500;
+let chartTeto=null;
+
+const tetoLinePlugin={
+  id:"tetoLine",
+  afterDatasetsDraw(chart){
+    const opts=chart.config.options.plugins&&chart.config.options.plugins.tetoLine;
+    if(!opts||opts.value==null) return;
+    const {ctx,chartArea,scales}=chart;
+    const x=scales.x.getPixelForValue(opts.value);
+    if(x<chartArea.left||x>chartArea.right) return;
+    ctx.save();
+    ctx.strokeStyle=opts.color||"#14181D";
+    ctx.setLineDash([5,4]);
+    ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(x,chartArea.top); ctx.lineTo(x,chartArea.bottom); ctx.stroke();
+    ctx.restore();
+  }
+};
+Chart.register(tetoLinePlugin);
+
+function renderTeto(){
+  $("#ttTetoValor").textContent="R$ "+fmtBRL(TETO_MENSAL);
+  if(!periods.length){
+    $("#tetoEmpty").style.display="block"; $("#tetoBody").hidden=true; return;
+  }
+  const state=computeState();
+  const rows=state
+    .filter(r=>r.pending<periods.length)
+    .map(r=>({d:r.d, total:r.total, nMeses:periods.length-r.pending, media:r.total/(periods.length-r.pending)}))
+    .sort((a,b)=>b.media-a.media);
+
+  if(!rows.length){ $("#tetoEmpty").style.display="block"; $("#tetoBody").hidden=true; return; }
+  $("#tetoEmpty").style.display="none"; $("#tetoBody").hidden=false;
+
+  const ini=periods[0], fim=periods[periods.length-1];
+  $("#ttRef").textContent = periods.length===1
+    ? `${MESES[ini.mes-1]}/${ini.ano}`
+    : `${MESES[ini.mes-1]}/${ini.ano} – ${MESES[fim.mes-1]}/${fim.ano} (${periods.length} meses)`;
+
+  const acima=rows.filter(r=>r.media>TETO_MENSAL);
+  $("#ttTeto").textContent=fmtBRL(TETO_MENSAL);
+  $("#ttCount").textContent=acima.length+" de "+rows.length;
+  $("#ttCountHint").textContent="deputados(as) com média mensal acima do teto no período";
+  $("#ttMax").textContent=fmtBRL(rows[0].media);
+  $("#ttMaxHint").textContent=rows[0].d.nome;
+  const mediaGeral=rows.reduce((s,r)=>s+r.media,0)/rows.length;
+  $("#ttAvg").textContent=fmtBRL(mediaGeral);
+
+  const rowH=22, minH=280;
+  const wrap=$("#tetoChartWrap");
+  wrap.style.height=Math.max(minH, rows.length*rowH+40)+"px";
+
+  const labels=rows.map(r=>r.d.nome+" ("+r.d.partido+")");
+  const data=rows.map(r=>r.media);
+  const colors=rows.map(r=>r.media>TETO_MENSAL?"#C8102E":"#454E58");
+
+  const options={
+    responsive:true,maintainAspectRatio:false,animation:false,indexAxis:"y",
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:c=>" R$ "+fmtBRL(c.parsed.x)+"/mês"}},
+      tetoLine:{value:TETO_MENSAL,color:"#14181D"}
+    },
+    scales:{
+      x:{ticks:{callback:v=>"R$ "+(v>=1000?(v/1000).toLocaleString("pt-BR")+" mil":v)},grid:{color:"#EDF0F3"}},
+      y:{grid:{display:false},ticks:{font:{family:"'IBM Plex Mono'",size:10.5}}}
+    }
+  };
+  if(!chartTeto){
+    chartTeto=new Chart($("#chartTeto"),{type:"bar",
+      data:{labels,datasets:[{data,backgroundColor:colors,borderRadius:3,maxBarThickness:18}]},options});
+  }else{
+    chartTeto.data.labels=labels; chartTeto.data.datasets[0].data=data;
+    chartTeto.data.datasets[0].backgroundColor=colors; chartTeto.update();
+  }
+}
 
 /* ================= inicialização ================= */
 $("#q").addEventListener("input",renderList);
