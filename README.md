@@ -38,6 +38,13 @@ aba **"Acima do teto"** deste painel não aponta uma irregularidade quando a mé
 de um deputado ultrapassa R$ 31.500 — é apenas um indicador de acompanhamento, já que
 esse acúmulo de saldo é previsto em lei.
 
+**Não confunda com o subsídio (salário).** O subsídio dos deputados é uma rubrica
+separada da verba indenizatória, com reajuste escalonado e datas próprias: R$ 25.300
+até dez/2022, R$ 29.400 em jan/2023, R$ 31.200 em abr/2023, R$ 33.000 em fev/2024 e
+R$ 34.700 em fev/2025. Esse escalonamento é do salário, e não se aplica ao teto da
+verba indenizatória tratado neste painel, que teve um único reajuste — de R$ 27 mil
+para R$ 31,5 mil — em fevereiro de 2023.
+
 ## Funcionalidades (abas)
 
 - **Deputados** — busca e filtro por nome/partido; ao selecionar um deputado, mostra o
