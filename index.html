@@ -397,18 +397,30 @@
 
       <div class="teto-info">
         <div>
-          <strong>Teto mensal da verba indenizatória: <span id="ttTetoValor">R$ 31.500,00</span></strong>
-          <p>Limite de reembolso mensal fixado pela Deliberação da Mesa nº 2.446/2009 (ALMG), reajustado em 16,6% —
-          de R$ 27 mil para R$ 31,5 mil — a partir de fevereiro de 2023. O saldo não usado num mês pode ser acumulado
-          e reembolsado em meses seguintes dentro do mesmo exercício financeiro, o que permite que a média mensal
-          de um período, ou mesmo um único mês, ultrapasse esse valor nominal.
-          Fonte: <a href="https://www.otempo.com.br/politica/aparte/almg-aumenta-limite-da-verba-indenizatoria-de-deputados-para-r-31-5-mil-1.2815926" target="_blank" rel="noopener">O TEMPO, 21/02/2023</a>
-          e <a href="https://www.almg.gov.br/transparencia/prestacao-de-contas/deputados/verba-indenizatoria/" target="_blank" rel="noopener">portal de transparência da ALMG</a>.
-          Confira o valor vigente antes de tirar conclusões — deliberações da Mesa podem reajustá-lo.</p>
+          <strong>Teto mensal da verba indenizatória: <span id="ttTetoValor">R$ 36.209,15</span> (2026)</strong>
+          <p>Limite de reembolso mensal fixado pela Deliberação da Mesa nº 2.446/2009 (ALMG). O valor passou de
+          R$ 27 mil para R$ 31,5 mil (reajuste de 16,6%) em fevereiro de 2023; a partir daí, o teto passou a ser
+          calculado com base na UFEMG (Unidade Fiscal do Estado de Minas Gerais) — como a UFEMG é reajustada todo
+          início de ano pela Secretaria de Fazenda de MG, o valor em reais do teto sobe junto, sem depender de uma
+          nova deliberação a cada vez. O saldo não usado num mês pode ser acumulado e reembolsado em meses
+          seguintes dentro do mesmo exercício financeiro, o que permite que a média mensal de um período, ou mesmo
+          um único mês, ultrapasse o valor nominal daquele ano.
+          Fonte: <a href="https://www.otempo.com.br/politica/aparte/almg-aumenta-limite-da-verba-indenizatoria-de-deputados-para-r-31-5-mil-1.2815926" target="_blank" rel="noopener">O TEMPO, 21/02/2023</a>,
+          <a href="https://www.almg.gov.br/transparencia/prestacao-de-contas/deputados/verba-indenizatoria/" target="_blank" rel="noopener">portal de transparência da ALMG</a>
+          e <a href="https://www.fazenda.mg.gov.br/empresas/legislacao_tributaria/resolucoes/ufemg.html" target="_blank" rel="noopener">resoluções da UFEMG (SEF/MG)</a>.
+          Confira o valor vigente antes de tirar conclusões — novas deliberações da Mesa podem reajustá-lo além do
+          que consta na tabela abaixo.</p>
+          <table class="party-table" style="max-width:360px;margin-top:10px">
+            <tr><th>Ano</th><th>UFEMG</th><th>Teto mensal</th></tr>
+            <tr><td>2023</td><td>R$ 5,0369</td><td>R$ 31.500,00</td></tr>
+            <tr><td>2024</td><td>R$ 5,2797</td><td>R$ 33.098,53</td></tr>
+            <tr><td>2025</td><td>R$ 5,5310</td><td>R$ 34.587,96</td></tr>
+            <tr><td>2026</td><td>R$ 5,7899</td><td>R$ 36.209,15</td></tr>
+          </table>
           <p style="margin-top:10px"><strong style="font-size:13.5px">Não confunda com o subsídio (salário)</strong> — o subsídio dos deputados é uma rubrica
           separada, com reajuste escalonado e datas próprias (R$ 25.300 até dez/2022; R$ 29.400 em jan/2023; R$ 31.200 em abr/2023;
           R$ 33.000 em fev/2024; R$ 34.700 em fev/2025). Esse escalonamento <em>não</em> se aplica ao teto da verba indenizatória, que
-          teve um único reajuste (de R$ 27 mil para R$ 31,5 mil) em fevereiro de 2023.</p>
+          segue a tabela acima.</p>
         </div>
       </div>
 
@@ -423,7 +435,7 @@
         <div class="period-summary" style="margin-bottom:14px">Período analisado: <strong id="ttRef"></strong></div>
 
         <div class="kpis">
-          <div class="kpi"><div class="label">Teto mensal vigente</div><div class="value money" id="ttTeto">—</div></div>
+          <div class="kpi"><div class="label">Teto mensal do período</div><div class="value money" id="ttTeto">—</div></div>
           <div class="kpi"><div class="label">Acima do teto</div><div class="value" id="ttCount">—</div><div class="hint" id="ttCountHint"></div></div>
           <div class="kpi"><div class="label">Maior média mensal</div><div class="value money" id="ttMax">—</div><div class="hint" id="ttMaxHint"></div></div>
           <div class="kpi"><div class="label">Média geral dos deputados</div><div class="value money" id="ttAvg">—</div></div>
@@ -979,9 +991,20 @@ $("#btnRank").onclick=loadRanking;
 initRankControls();
 
 /* ================= acima do teto mensal ================= */
-/* Deliberação da Mesa nº 2.446/2009 (ALMG), reajustada em 16,6% (de R$ 27 mil p/ R$ 31,5 mil) a partir de fev/2023.
+/* Deliberação da Mesa nº 2.446/2009 (ALMG). Desde fev/2023 o teto é indexado à UFEMG (Unidade Fiscal do Estado
+   de Minas Gerais), reajustada todo início de ano pela SEF/MG — por isso o valor em reais muda a cada ano.
    Confira o valor vigente no portal de transparência da ALMG antes de usar em análises — a Mesa pode reajustá-lo. */
-const TETO_MENSAL = 31500;
+const TETO_POR_ANO = {2023:31500, 2024:33098.53, 2025:34587.96, 2026:36209.15};
+function tetoDoAno(ano){
+  if(TETO_POR_ANO[ano]!=null) return TETO_POR_ANO[ano];
+  const anos=Object.keys(TETO_POR_ANO).map(Number);
+  return TETO_POR_ANO[ano<Math.min(...anos) ? Math.min(...anos) : Math.max(...anos)];
+}
+/* período pode cruzar anos com tetos diferentes — usa a média ponderada pelos meses selecionados */
+function tetoRefPeriodo(){
+  if(!periods.length) return tetoDoAno(new Date().getFullYear());
+  return periods.reduce((s,p)=>s+tetoDoAno(p.ano),0)/periods.length;
+}
 let chartTeto=null;
 
 const tetoLinePlugin={
@@ -1003,7 +1026,8 @@ const tetoLinePlugin={
 Chart.register(tetoLinePlugin);
 
 function renderTeto(){
-  $("#ttTetoValor").textContent="R$ "+fmtBRL(TETO_MENSAL);
+  const tetoRef=tetoRefPeriodo();
+  $("#ttTetoValor").textContent="R$ "+fmtBRL(tetoDoAno(new Date().getFullYear()))+" ("+new Date().getFullYear()+")";
   if(!periods.length){
     $("#tetoEmpty").style.display="block"; $("#tetoBody").hidden=true; return;
   }
@@ -1021,8 +1045,8 @@ function renderTeto(){
     ? `${MESES[ini.mes-1]}/${ini.ano}`
     : `${MESES[ini.mes-1]}/${ini.ano} – ${MESES[fim.mes-1]}/${fim.ano} (${periods.length} meses)`;
 
-  const acima=rows.filter(r=>r.media>TETO_MENSAL);
-  $("#ttTeto").textContent=fmtBRL(TETO_MENSAL);
+  const acima=rows.filter(r=>r.media>tetoRef);
+  $("#ttTeto").textContent=fmtBRL(tetoRef);
   $("#ttCount").textContent=acima.length+" de "+rows.length;
   $("#ttCountHint").textContent="deputados(as) com média mensal acima do teto no período";
   $("#ttMax").textContent=fmtBRL(rows[0].media);
@@ -1036,14 +1060,14 @@ function renderTeto(){
 
   const labels=rows.map(r=>r.d.nome+" ("+r.d.partido+")");
   const data=rows.map(r=>r.media);
-  const colors=rows.map(r=>r.media>TETO_MENSAL?"#C8102E":"#454E58");
+  const colors=rows.map(r=>r.media>tetoRef?"#C8102E":"#454E58");
 
   const options={
     responsive:true,maintainAspectRatio:false,animation:false,indexAxis:"y",
     plugins:{
       legend:{display:false},
       tooltip:{callbacks:{label:c=>" R$ "+fmtBRL(c.parsed.x)+"/mês"}},
-      tetoLine:{value:TETO_MENSAL,color:"#14181D"}
+      tetoLine:{value:tetoRef,color:"#14181D"}
     },
     scales:{
       x:{ticks:{callback:v=>"R$ "+(v>=1000?(v/1000).toLocaleString("pt-BR")+" mil":v)},grid:{color:"#EDF0F3"}},

@@ -27,23 +27,35 @@ tempo real e apresenta o resultado de forma visual.
 
 Cada deputado tem direito a reembolso de despesas indenizatórias até um **teto mensal**,
 fixado pela Deliberação da Mesa da ALMG nº 2.446/2009. Esse teto foi reajustado em 16,6%
-em fevereiro de 2023, passando de R$ 27.000 para **R$ 31.500 por mês** (valor vigente
-usado neste painel — confira o valor atual no
-[portal de transparência da ALMG](https://www.almg.gov.br/transparencia/prestacao-de-contas/deputados/verba-indenizatoria/)
-antes de tirar conclusões, pois novas deliberações podem reajustá-lo).
+em fevereiro de 2023, passando de R$ 27.000 para R$ 31.500 por mês. A partir daí, o
+cálculo passou a ser feito com base na **UFEMG** (Unidade Fiscal do Estado de Minas
+Gerais): como a Secretaria de Fazenda de MG reajusta a UFEMG todo início de ano, o valor
+em reais do teto sobe junto, sem depender de uma nova deliberação a cada vez.
+
+| Ano  | UFEMG do ano | Teto mensal (aprox.) |
+| ---- | -----------: | --------------------: |
+| 2023 |     R$ 5,0369 |          R$ 31.500,00 |
+| 2024 |     R$ 5,2797 |          R$ 33.098,53 |
+| 2025 |     R$ 5,5310 |          R$ 34.587,96 |
+| 2026 |     R$ 5,7899 |      **R$ 36.209,15** |
+
+Confira o valor vigente no [portal de transparência da ALMG](https://www.almg.gov.br/transparencia/prestacao-de-contas/deputados/verba-indenizatoria/)
+e as [resoluções da UFEMG (SEF/MG)](https://www.fazenda.mg.gov.br/empresas/legislacao_tributaria/resolucoes/ufemg.html)
+antes de tirar conclusões — novas deliberações da Mesa podem reajustar o teto além do que
+consta nesta tabela.
 
 Um ponto importante: a norma permite que o saldo não utilizado em um mês seja acumulado
 e reembolsado em meses seguintes, dentro do mesmo exercício financeiro. Por isso, a
 aba **"Acima do teto"** deste painel não aponta uma irregularidade quando a média mensal
-de um deputado ultrapassa R$ 31.500 — é apenas um indicador de acompanhamento, já que
-esse acúmulo de saldo é previsto em lei.
+de um deputado ultrapassa o teto do ano — é apenas um indicador de acompanhamento, já
+que esse acúmulo de saldo é previsto em lei.
 
 **Não confunda com o subsídio (salário).** O subsídio dos deputados é uma rubrica
 separada da verba indenizatória, com reajuste escalonado e datas próprias: R$ 25.300
 até dez/2022, R$ 29.400 em jan/2023, R$ 31.200 em abr/2023, R$ 33.000 em fev/2024 e
 R$ 34.700 em fev/2025. Esse escalonamento é do salário, e não se aplica ao teto da
-verba indenizatória tratado neste painel, que teve um único reajuste — de R$ 27 mil
-para R$ 31,5 mil — em fevereiro de 2023.
+verba indenizatória tratado neste painel, que segue a tabela acima (reajustada pela
+UFEMG, não pelo mesmo cronograma do subsídio).
 
 ## Funcionalidades (abas)
 
@@ -52,7 +64,8 @@ para R$ 31,5 mil — em fevereiro de 2023.
 - **Ranking** — compara todos os deputados (e partidos) em um ou mais períodos
   escolhidos, com uma "corrida de barras" animada conforme as respostas da API chegam.
 - **Acima do teto** — reaproveita o período carregado no Ranking e compara a média
-  mensal de cada deputado(a) com o teto de R$ 31.500, destacando quem está acima.
+  mensal de cada deputado(a) com o teto vigente no(s) ano(s) do período, destacando
+  quem está acima.
 
 Também é possível exportar em CSV tudo o que já foi consultado na sessão (botão
 "Exportar CSV"), útil para análises no Excel/Power BI.
