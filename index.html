@@ -296,7 +296,7 @@
         </div>
       </div>
 
-      <div class="yearbar" id="yearbar" role="tablist" aria-label="Ano de referência"></div>
+      <div class="yearbar" id="yearbar" role="tablist" aria-label="Anos de referência (clique para acumular)"></div>
 
       <div class="progress" id="progress">
         <span id="progressTxt">Consultando meses…</span>
@@ -304,7 +304,7 @@
       </div>
 
       <div class="kpis">
-        <div class="kpi"><div class="label">Total no ano</div><div class="value money" id="kTotal">—</div></div>
+        <div class="kpi"><div class="label" id="lblTotal">Total no ano</div><div class="value money" id="kTotal">—</div></div>
         <div class="kpi"><div class="label">Média mensal</div><div class="value money" id="kAvg">—</div><div class="hint" id="kMonths"></div></div>
         <div class="kpi"><div class="label">Maior mês</div><div class="value money" id="kMax">—</div><div class="hint" id="kMaxHint"></div></div>
         <div class="kpi"><div class="label">Maior categoria</div><div class="value" id="kCat" style="font-family:'IBM Plex Sans';font-size:15px;font-weight:600">—</div><div class="hint" id="kCatHint"></div></div>
@@ -560,7 +560,7 @@ function parseResumo(json){ // → [{categoria, valor}]
 }
 
 /* ================= estado ================= */
-let deps=[...SEED], current=null, currentYear=null, chart=null, loadToken=0;
+let deps=[...SEED], current=null, selectedYears=new Set(), chart=null, loadToken=0;
 const cache={ datas:{}, mes:{} };           // cache de sessão
 const csvRows=[];                            // linhas p/ exportação
 const csvPushed=new Set();                   // evita duplicatas entre as páginas
@@ -620,7 +620,7 @@ function banner(msg){ const b=$("#banner");
 
 /* ================= dashboard do deputado ================= */
 async function selectDep(d){
-  current=d; currentYear=null; renderList();
+  current=d; selectedYears=new Set(); renderList();
   $("#empty").hidden=true; $("#dash").hidden=false;
   $("#dName").textContent=d.nome;
   $("#dParty").textContent=d.partido;
@@ -658,27 +658,40 @@ async function selectDep(d){
     const anos=[...new Set(datas.map(x=>x.ano))].sort((a,b)=>b-a);
     for(const a of anos){
       const b=document.createElement("button");
-      b.textContent=a; b.setAttribute("role","tab");
-      b.onclick=()=>loadYear(d,a,datas);
+      b.textContent=a; b.setAttribute("role","tab"); b.dataset.ano=a;
+      b.onclick=()=>toggleYear(d,a,datas);
       $("#yearbar").appendChild(b);
     }
-    loadYear(d,anos[0],datas);
+    selectedYears=new Set([anos[0]]);
+    loadYears(d,datas);
   }catch(e){
     progress(false);
     banner("Falha ao consultar a API de verbas ("+e.message+"). Abra o arquivo direto no navegador e verifique a conexão; a API limita a 1 requisição por segundo.");
   }
 }
 
-async function loadYear(d,ano,datas){
-  currentYear=ano; const token=++loadToken;
-  [...$("#yearbar").children].forEach(b=>b.classList.toggle("active",+b.textContent===ano));
-  resetKpis();
-  const meses=datas.filter(x=>x.ano===ano).map(x=>x.mes).sort((a,b)=>a-b);
-  const porMes={}, porCat={};
-  let done=0;
-  progress(true,`Carregando ${meses.length} meses de ${ano}…`,0);
+function toggleYear(d,ano,datas){
+  if(selectedYears.has(ano)){
+    if(selectedYears.size===1) return; // mantém sempre ao menos um ano selecionado
+    selectedYears.delete(ano);
+  }else{
+    selectedYears.add(ano);
+  }
+  loadYears(d,datas);
+}
 
-  for(const m of meses){
+async function loadYears(d,datas){
+  const token=++loadToken;
+  const anos=[...selectedYears].sort((a,b)=>a-b);
+  [...$("#yearbar").children].forEach(b=>b.classList.toggle("active",selectedYears.has(+b.dataset.ano)));
+  resetKpis();
+  const periodos=datas.filter(x=>selectedYears.has(x.ano)).sort((a,b)=>a.ano-b.ano||a.mes-b.mes);
+  const rotulo=anos.join(", ");
+  const porPeriodo=[], porCat={};
+  let done=0;
+  progress(true,`Carregando ${periodos.length} meses de ${rotulo}…`,0);
+
+  for(const {ano,mes:m} of periodos){
     const key=`${d.id}/${ano}/${m}`;
     let itens=cache.mes[key];
     if(!itens){
@@ -689,10 +702,11 @@ async function loadYear(d,ano,datas){
       }catch(e){ itens=[]; }
     }
     if(token!==loadToken||current!==d) return;   // usuário trocou de deputado/ano
-    porMes[m]=itens.reduce((s,it)=>s+it.valor,0);
+    const total=itens.reduce((s,it)=>s+it.valor,0);
+    porPeriodo.push({ano,mes:m,valor:total});
     itens.forEach(it=>porCat[it.categoria]=(porCat[it.categoria]||0)+it.valor);
-    done++; progress(true,`Carregando ${done}/${meses.length} meses de ${ano}…`,done/meses.length);
-    renderDash(porMes,porCat,ano);              // renderização progressiva
+    done++; progress(true,`Carregando ${done}/${periodos.length} meses de ${rotulo}…`,done/periodos.length);
+    renderDash(porPeriodo,porCat,anos);          // renderização progressiva
   }
   progress(false);
 }
@@ -708,22 +722,24 @@ function progress(show,txt,frac){
   $("#progressFill").style.width=((frac||0)*100)+"%";
 }
 
-function renderDash(porMes,porCat,ano){
-  const meses=Object.keys(porMes).map(Number).sort((a,b)=>a-b);
-  const vals=meses.map(m=>porMes[m]);
+function renderDash(porPeriodo,porCat,anos){
+  const multi=anos.length>1;
+  const vals=porPeriodo.map(p=>p.valor);
   const total=vals.reduce((s,v)=>s+v,0);
+  const anoTxt=multi?`${anos[0]}–${anos[anos.length-1]}`:String(anos[0]??"");
+  $("#lblTotal").textContent=multi?"Total no período":"Total no ano";
   $("#kTotal").textContent=fmtBRL(total);
-  $("#kAvg").textContent=fmtBRL(meses.length?total/meses.length:0);
-  $("#kMonths").textContent=meses.length+" meses fechados em "+ano;
-  if(meses.length){
+  $("#kAvg").textContent=fmtBRL(porPeriodo.length?total/porPeriodo.length:0);
+  $("#kMonths").textContent=porPeriodo.length+" meses fechados em "+anoTxt;
+  if(porPeriodo.length){
     const iMax=vals.indexOf(Math.max(...vals));
     $("#kMax").textContent=fmtBRL(vals[iMax]);
-    $("#kMaxHint").textContent=MESES[meses[iMax]-1]+"/"+ano;
+    $("#kMaxHint").textContent=MESES[porPeriodo[iMax].mes-1]+"/"+porPeriodo[iMax].ano;
   }
   const cats=Object.entries(porCat).sort((a,b)=>b[1]-a[1]);
   if(cats.length){
     $("#kCat").textContent=cats[0][0];
-    $("#kCatHint").textContent="R$ "+fmtBRL(cats[0][1])+" no ano";
+    $("#kCatHint").textContent="R$ "+fmtBRL(cats[0][1])+(multi?" no período":" no ano");
   }
   /* categorias */
   const maxCat=cats.length?cats[0][1]:1;
@@ -734,7 +750,7 @@ function renderDash(porMes,porCat,ano){
       <span class="cat-bar"><i style="width:${(v/maxCat*100).toFixed(1)}%"></i></span>
     </div>`).join("");
   /* gráfico mensal */
-  const labels=meses.map(m=>MESES[m-1]);
+  const labels=porPeriodo.map(p=>multi?MESES[p.mes-1]+"/"+String(p.ano).slice(2):MESES[p.mes-1]);
   if(!chart){
     chart=new Chart($("#chart"),{
       type:"bar",
